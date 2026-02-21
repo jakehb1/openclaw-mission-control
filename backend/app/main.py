@@ -13,6 +13,7 @@ from fastapi_pagination import add_pagination
 from app.api.activity import router as activity_router
 from app.api.agent import router as agent_router
 from app.api.agents import router as agents_router
+from app.api.content import router as content_router
 from app.api.approvals import router as approvals_router
 from app.api.auth import router as auth_router
 from app.api.board_group_memory import router as board_group_memory_router
@@ -58,6 +59,10 @@ OPENAPI_TAGS = [
     {
         "name": "agents",
         "description": "Organization-level agent directory, lifecycle, and management operations.",
+    },
+    {
+        "name": "content",
+        "description": "Content queue for AI-generated social posts, review, and scheduling.",
     },
     {
         "name": "activity",
@@ -161,6 +166,7 @@ _JSON_SCHEMA_REF_PREFIX = "#/components/schemas/"
 _OPENAPI_EXAMPLE_TAGS = {
     "agents",
     "activity",
+    "content",
     "gateways",
     "metrics",
     "organizations",
@@ -526,6 +532,7 @@ api_v1.include_router(auth_router)
 api_v1.include_router(agent_router)
 api_v1.include_router(agents_router)
 api_v1.include_router(activity_router)
+api_v1.include_router(content_router)
 api_v1.include_router(gateway_router)
 api_v1.include_router(gateways_router)
 api_v1.include_router(metrics_router)
