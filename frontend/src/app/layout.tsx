@@ -3,43 +3,43 @@ import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { DM_Serif_Display, IBM_Plex_Sans, Sora } from "next/font/google";
+import { Inter } from "next/font/google";
 
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { GlobalLoader } from "@/components/ui/global-loader";
 
 export const metadata: Metadata = {
-  title: "OpenClaw Mission Control",
-  description: "A calm command center for every task.",
+  title: "Clawdbot Mission Control",
+  description: "Your AI agent command center.",
 };
 
-const bodyFont = IBM_Plex_Sans({
+const interFont = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-body",
   weight: ["400", "500", "600", "700"],
 });
 
-const headingFont = Sora({
+const interHeading = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-heading",
   weight: ["500", "600", "700"],
 });
 
-const displayFont = DM_Serif_Display({
+const interDisplay = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-display",
-  weight: ["400"],
+  weight: ["400", "500", "600"],
 });
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body
-        className={`${bodyFont.variable} ${headingFont.variable} ${displayFont.variable} min-h-screen bg-app text-strong antialiased`}
+        className={`${interFont.variable} ${interHeading.variable} ${interDisplay.variable} min-h-screen bg-app text-strong antialiased`}
       >
         <AuthProvider>
           <QueryProvider>

@@ -5,46 +5,32 @@ export const dynamic = "force-dynamic";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { 
+  ArrowLeft, 
+  GitCommit, 
+  MessageSquare, 
+  CheckCircle2, 
+  AlertCircle,
+  Clock,
+  TrendingUp,
+  Calendar as CalendarIcon,
+  Activity as ActivityIcon,
+} from "lucide-react";
 
-import { SignInButton, SignedIn, SignedOut, useAuth } from "@/auth/clerk";
+import { SignedIn, SignedOut, useAuth } from "@/auth/clerk";
 
-import { ApiError } from "@/api/mutator";
-import {
-  type getAgentApiV1AgentsAgentIdGetResponse,
-  useDeleteAgentApiV1AgentsAgentIdDelete,
-  useGetAgentApiV1AgentsAgentIdGet,
-} from "@/api/generated/agents/agents";
-import {
-  type listActivityApiV1ActivityGetResponse,
-  useListActivityApiV1ActivityGet,
-} from "@/api/generated/activity/activity";
-import {
-  type listBoardsApiV1BoardsGetResponse,
-  useListBoardsApiV1BoardsGet,
-} from "@/api/generated/boards/boards";
-import {
-  formatRelativeTimestamp as formatRelative,
-  formatTimestamp,
-} from "@/lib/formatters";
-import { useOrganizationMembership } from "@/lib/use-organization-membership";
-import type {
-  ActivityEventRead,
-  AgentRead,
-  BoardRead,
-} from "@/api/generated/model";
-import { Markdown } from "@/components/atoms/Markdown";
-import { StatusPill } from "@/components/atoms/StatusPill";
 import { DashboardSidebar } from "@/components/organisms/DashboardSidebar";
 import { DashboardShell } from "@/components/templates/DashboardShell";
+import { SignedOutPanel } from "@/components/auth/SignedOutPanel";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
+import { ActivityFeed } from "@/components/clawdbot/ActivityFeed";
+import { ProgressRing, ProgressBar } from "@/components/clawdbot/ProgressRing";
+import { StatsCard, StatsRow } from "@/components/clawdbot/StatsCard";
+
+import { useAgentDetail } from "@/lib/use-clawdbot";
+import { CLAWDBOT_AGENTS, ClawdbotSession } from "@/lib/clawdbot-gateway";
+import { cn } from "@/lib/utils";
 
 export default function AgentDetailPage() {
   const { isSignedIn } = useAuth();
@@ -53,345 +39,363 @@ export default function AgentDetailPage() {
   const agentIdParam = params?.agentId;
   const agentId = Array.isArray(agentIdParam) ? agentIdParam[0] : agentIdParam;
 
-  const { isAdmin } = useOrganizationMembership(isSignedIn);
-
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const agentQuery = useGetAgentApiV1AgentsAgentIdGet<
-    getAgentApiV1AgentsAgentIdGetResponse,
-    ApiError
-  >(agentId ?? "", {
-    query: {
-      enabled: Boolean(isSignedIn && isAdmin && agentId),
-      refetchInterval: 30_000,
-      refetchOnMount: "always",
-      retry: false,
-    },
-  });
-
-  const activityQuery = useListActivityApiV1ActivityGet<
-    listActivityApiV1ActivityGetResponse,
-    ApiError
-  >(
-    { limit: 200 },
-    {
-      query: {
-        enabled: Boolean(isSignedIn && isAdmin),
-        refetchInterval: 30_000,
-        retry: false,
-      },
-    },
-  );
-
-  const boardsQuery = useListBoardsApiV1BoardsGet<
-    listBoardsApiV1BoardsGetResponse,
-    ApiError
-  >(undefined, {
-    query: {
-      enabled: Boolean(isSignedIn && isAdmin),
-      refetchInterval: 60_000,
-      refetchOnMount: "always",
-      retry: false,
-    },
-  });
-
-  const agent: AgentRead | null =
-    agentQuery.data?.status === 200 ? agentQuery.data.data : null;
-  const events = useMemo<ActivityEventRead[]>(() => {
-    if (activityQuery.data?.status !== 200) return [];
-    return activityQuery.data.data.items ?? [];
-  }, [activityQuery.data]);
-  const boards = useMemo<BoardRead[]>(() => {
-    if (boardsQuery.data?.status !== 200) return [];
-    return boardsQuery.data.data.items ?? [];
-  }, [boardsQuery.data]);
-
-  const agentEvents = useMemo(() => {
-    if (!agent) return [];
-    return events.filter((event) => event.agent_id === agent.id);
-  }, [events, agent]);
-  const linkedBoard =
-    !agent?.board_id || agent?.is_gateway_main
-      ? null
-      : (boards.find((board) => board.id === agent.board_id) ?? null);
-
-  const deleteMutation = useDeleteAgentApiV1AgentsAgentIdDelete<ApiError>({
-    mutation: {
-      onSuccess: () => {
-        setDeleteOpen(false);
-        router.push("/agents");
-      },
-      onError: (err) => {
-        setDeleteError(err.message || "Something went wrong.");
-      },
-    },
-  });
-
-  const isLoading =
-    agentQuery.isLoading || activityQuery.isLoading || boardsQuery.isLoading;
-  const error =
-    agentQuery.error?.message ??
-    activityQuery.error?.message ??
-    boardsQuery.error?.message ??
-    null;
-
-  const isDeleting = deleteMutation.isPending;
-  const agentStatus = agent?.status ?? "unknown";
-
-  const handleDelete = () => {
-    if (!agentId || !isSignedIn) return;
-    setDeleteError(null);
-    deleteMutation.mutate({ agentId });
+  const { agent, activity, sessions, metrics, isLoading } = useAgentDetail(agentId || '');
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'sessions'>('overview');
+  
+  // Calculate performance score (mock)
+  const performanceScore = useMemo(() => {
+    if (!metrics) return 0;
+    const score = Math.min(100, 
+      (metrics.tasksCompleted * 10) + 
+      (metrics.commits * 5) - 
+      (metrics.errors * 15)
+    );
+    return Math.max(0, score);
+  }, [metrics]);
+  
+  const statusColors = {
+    online: { bg: "bg-green-500", text: "text-green-700", bgLight: "bg-green-50" },
+    offline: { bg: "bg-gray-300", text: "text-gray-700", bgLight: "bg-gray-50" },
+    busy: { bg: "bg-orange-500", text: "text-orange-700", bgLight: "bg-orange-50" },
+    idle: { bg: "bg-blue-400", text: "text-blue-700", bgLight: "bg-blue-50" },
   };
+  
+  const statusLabels = {
+    online: "Online",
+    offline: "Offline", 
+    busy: "Busy",
+    idle: "Idle",
+  };
+
+  if (!agent) {
+    return (
+      <DashboardShell>
+        <DashboardSidebar />
+        <main className="flex flex-1 items-center justify-center bg-[color:var(--bg-secondary)]">
+          <div className="text-center">
+            <p className="text-[color:var(--text-muted)]">Agent not found</p>
+            <Button variant="outline" onClick={() => router.push('/agents')} className="mt-4">
+              Back to Agents
+            </Button>
+          </div>
+        </main>
+      </DashboardShell>
+    );
+  }
+
+  const status = agent.status || 'offline';
+  const colors = statusColors[status];
 
   return (
     <DashboardShell>
       <SignedOut>
-        <div className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl surface-panel p-10 text-center">
-          <p className="text-sm text-muted">Sign in to view agents.</p>
-          <SignInButton
-            mode="modal"
-            forceRedirectUrl="/agents"
-            signUpForceRedirectUrl="/agents"
-          >
-            <Button>Sign in</Button>
-          </SignInButton>
-        </div>
+        <SignedOutPanel
+          message="Sign in to view agent details."
+          forceRedirectUrl={`/agents/${agentId}`}
+          signUpForceRedirectUrl={`/agents/${agentId}`}
+        />
       </SignedOut>
       <SignedIn>
         <DashboardSidebar />
-        {!isAdmin ? (
-          <div className="flex h-full flex-col gap-6 rounded-2xl surface-panel p-8">
-            <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-6 py-5 text-sm text-muted">
-              Only organization owners and admins can access agents.
-            </div>
-          </div>
-        ) : (
-          <div className="flex h-full flex-col gap-6 rounded-2xl surface-panel p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-quiet">
-                  Agents
-                </p>
-                <h1 className="text-2xl font-semibold text-strong">
-                  {agent?.name ?? "Agent"}
-                </h1>
-                <p className="text-sm text-muted">
-                  Review agent health, session binding, and recent activity.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => router.push("/agents")}
-                >
-                  Back to agents
-                </Button>
-                {agent ? (
-                  <Link
-                    href={`/agents/${agent.id}/edit`}
-                    className="inline-flex h-10 items-center justify-center rounded-xl border border-[color:var(--border)] px-4 text-sm font-semibold text-muted transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
-                  >
-                    Edit
-                  </Link>
-                ) : null}
-                {agent ? (
-                  <Button variant="outline" onClick={() => setDeleteOpen(true)}>
-                    Delete
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-
-            {error ? (
-              <div className="rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-3 text-xs text-muted">
-                {error}
-              </div>
-            ) : null}
-
-            {isLoading ? (
-              <div className="flex flex-1 items-center justify-center text-sm text-muted">
-                Loading agent details…
-              </div>
-            ) : agent ? (
-              <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-                <div className="space-y-6">
-                  <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] p-5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-quiet">
-                          Overview
-                        </p>
-                        <p className="mt-1 text-lg font-semibold text-strong">
-                          {agent.name}
-                        </p>
-                      </div>
-                      <StatusPill status={agentStatus} />
-                    </div>
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-quiet">
-                          Agent ID
-                        </p>
-                        <p className="mt-1 text-sm text-muted">{agent.id}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-quiet">
-                          Session key
-                        </p>
-                        <p className="mt-1 text-sm text-muted">
-                          {agent.openclaw_session_id ?? "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-quiet">
-                          Board
-                        </p>
-                        {agent.is_gateway_main ? (
-                          <p className="mt-1 text-sm text-strong">
-                            Gateway main (no board)
-                          </p>
-                        ) : linkedBoard ? (
-                          <Link
-                            href={`/boards/${linkedBoard.id}`}
-                            className="mt-1 inline-flex text-sm font-medium text-[color:var(--accent)] transition hover:underline"
-                          >
-                            {linkedBoard.name}
-                          </Link>
-                        ) : (
-                          <p className="mt-1 text-sm text-strong">—</p>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-quiet">
-                          Last seen
-                        </p>
-                        <p className="mt-1 text-sm text-strong">
-                          {formatRelative(agent.last_seen_at)}
-                        </p>
-                        <p className="text-xs text-quiet">
-                          {formatTimestamp(agent.last_seen_at)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-quiet">
-                          Updated
-                        </p>
-                        <p className="mt-1 text-sm text-muted">
-                          {formatTimestamp(agent.updated_at)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-quiet">
-                          Created
-                        </p>
-                        <p className="mt-1 text-sm text-muted">
-                          {formatTimestamp(agent.created_at)}
-                        </p>
-                      </div>
-                    </div>
+        <main className="flex-1 overflow-y-auto bg-[color:var(--bg-secondary)]">
+          {/* Header */}
+          <div className="border-b border-[color:var(--border-light)] bg-white">
+            <div className="px-8 py-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-5">
+                  {/* Agent avatar */}
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[color:var(--surface-muted)] to-[color:var(--surface-strong)] text-4xl shadow-apple">
+                    {agent.emoji}
                   </div>
-
-                  <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] p-5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-quiet">
-                        Health
+                  
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h1 className="text-2xl font-semibold text-[color:var(--text)] tracking-tight">
+                        {agent.name}
+                      </h1>
+                      <span className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
+                        colors.bgLight,
+                        colors.text
+                      )}>
+                        <span className={cn("h-1.5 w-1.5 rounded-full", colors.bg, status === 'online' && "animate-pulse")} />
+                        {statusLabels[status]}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-[color:var(--text-muted)]">
+                      Clawdbot Agent • Last active {agent.lastSeen ? formatRelativeTime(agent.lastSeen) : 'never'}
+                    </p>
+                    {agent.currentTask && (
+                      <p className="mt-2 text-sm text-[color:var(--accent)]">
+                        Currently: {agent.currentTask}
                       </p>
-                      <StatusPill status={agentStatus} />
-                    </div>
-                    <div className="mt-4 grid gap-3 text-sm text-muted">
-                      <div className="flex items-center justify-between">
-                        <span>Heartbeat window</span>
-                        <span>{formatRelative(agent.last_seen_at)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Session binding</span>
-                        <span>
-                          {agent.openclaw_session_id ? "Bound" : "Unbound"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Status</span>
-                        <span className="text-strong">{agentStatus}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-5">
-                  <div className="mb-4 flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-quiet">
-                      Activity
-                    </p>
-                    <p className="text-xs text-quiet">
-                      {agentEvents.length} events
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    {agentEvents.length === 0 ? (
-                      <div className="rounded-lg border border-dashed border-[color:var(--border)] bg-[color:var(--surface)] p-4 text-sm text-muted">
-                        No activity yet for this agent.
-                      </div>
-                    ) : (
-                      agentEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          className="rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] p-4 text-sm text-muted"
-                        >
-                          {event.message?.trim() ? (
-                            <div className="select-text cursor-text leading-relaxed text-strong break-words">
-                              <Markdown
-                                content={event.message}
-                                variant="comment"
-                              />
-                            </div>
-                          ) : (
-                            <p className="font-medium text-strong">
-                              {event.event_type}
-                            </p>
-                          )}
-                          <p className="mt-1 text-xs text-quiet">
-                            {formatTimestamp(event.created_at)}
-                          </p>
-                        </div>
-                      ))
                     )}
                   </div>
                 </div>
+                
+                <Button variant="outline" onClick={() => router.push('/agents')} className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  All Agents
+                </Button>
               </div>
-            ) : (
-              <div className="flex flex-1 items-center justify-center text-sm text-muted">
-                Agent not found.
+              
+              {/* Tabs */}
+              <div className="mt-6 flex gap-1">
+                {(['overview', 'activity', 'sessions'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={cn(
+                      "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                      activeTab === tab
+                        ? "bg-[color:var(--accent)] text-white"
+                        : "text-[color:var(--text-muted)] hover:bg-[color:var(--surface-muted)]"
+                    )}
+                  >
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-8">
+            {/* Overview Tab */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                {/* Stats row */}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <StatsCard
+                    title="Commits"
+                    value={metrics.commits}
+                    subtitle="Last 7 days"
+                    icon={<GitCommit className="h-5 w-5" />}
+                    color="purple"
+                  />
+                  <StatsCard
+                    title="Tasks Completed"
+                    value={metrics.tasksCompleted}
+                    subtitle="Last 7 days"
+                    icon={<CheckCircle2 className="h-5 w-5" />}
+                    color="green"
+                  />
+                  <StatsCard
+                    title="Messages"
+                    value={metrics.messagesProcessed}
+                    subtitle="Last 7 days"
+                    icon={<MessageSquare className="h-5 w-5" />}
+                    color="blue"
+                  />
+                  <StatsCard
+                    title="Errors"
+                    value={metrics.errors}
+                    subtitle="Last 7 days"
+                    icon={<AlertCircle className="h-5 w-5" />}
+                    color={metrics.errors > 0 ? "red" : "gray"}
+                  />
+                </div>
+                
+                <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+                  {/* Performance chart area */}
+                  <div className="rounded-2xl border border-[color:var(--border-light)] bg-white p-6">
+                    <h3 className="text-sm font-semibold text-[color:var(--text)] mb-6">
+                      Performance Overview
+                    </h3>
+                    <div className="flex items-center justify-center py-8">
+                      <ProgressRing
+                        progress={performanceScore}
+                        size={180}
+                        strokeWidth={12}
+                        color={performanceScore > 70 ? 'green' : performanceScore > 40 ? 'orange' : 'red'}
+                      >
+                        <div className="text-center">
+                          <span className="text-4xl font-semibold text-[color:var(--text)]">
+                            {performanceScore}
+                          </span>
+                          <p className="text-xs text-[color:var(--text-quiet)] mt-1">
+                            Performance Score
+                          </p>
+                        </div>
+                      </ProgressRing>
+                    </div>
+                    
+                    {/* Metric breakdown */}
+                    <div className="mt-6 pt-6 border-t border-[color:var(--border-light)] space-y-3">
+                      <MetricBar label="Task Completion" value={85} color="green" />
+                      <MetricBar label="Response Time" value={72} color="blue" />
+                      <MetricBar label="Code Quality" value={90} color="purple" />
+                      <MetricBar label="Error Rate" value={metrics.errors > 0 ? 100 - (metrics.errors * 10) : 100} color={metrics.errors > 0 ? "orange" : "green"} />
+                    </div>
+                  </div>
+                  
+                  {/* Session stats */}
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-[color:var(--border-light)] bg-white p-5">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-quiet)] mb-4">
+                        Session Stats
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-[color:var(--text-muted)]">Total Sessions</span>
+                          <span className="text-sm font-semibold text-[color:var(--text)]">{metrics.totalSessions}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-[color:var(--text-muted)]">Avg Duration</span>
+                          <span className="text-sm font-semibold text-[color:var(--text)]">{metrics.avgSessionDuration}m</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Recent activity preview */}
+                    <div className="rounded-2xl border border-[color:var(--border-light)] bg-white p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-quiet)]">
+                          Recent Activity
+                        </h4>
+                        <button
+                          onClick={() => setActiveTab('activity')}
+                          className="text-xs text-[color:var(--accent)] hover:underline"
+                        >
+                          View all
+                        </button>
+                      </div>
+                      <ActivityFeed 
+                        activities={activity.slice(0, 5)} 
+                        showAgentName={false}
+                        maxItems={5}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Activity Tab */}
+            {activeTab === 'activity' && (
+              <div className="rounded-2xl border border-[color:var(--border-light)] bg-white p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-semibold text-[color:var(--text)]">
+                    Activity History
+                  </h3>
+                  <span className="text-xs text-[color:var(--text-quiet)]">
+                    {activity.length} events
+                  </span>
+                </div>
+                <ActivityFeed activities={activity} showAgentName={false} maxItems={100} />
+              </div>
+            )}
+            
+            {/* Sessions Tab */}
+            {activeTab === 'sessions' && (
+              <div className="rounded-2xl border border-[color:var(--border-light)] bg-white">
+                <div className="border-b border-[color:var(--border-light)] px-6 py-4">
+                  <h3 className="text-sm font-semibold text-[color:var(--text)]">
+                    Session History
+                  </h3>
+                </div>
+                <div className="divide-y divide-[color:var(--border-light)]">
+                  {sessions.length === 0 ? (
+                    <div className="p-8 text-center text-sm text-[color:var(--text-muted)]">
+                      No sessions recorded yet
+                    </div>
+                  ) : (
+                    sessions.map((session) => (
+                      <SessionRow key={session.id} session={session} />
+                    ))
+                  )}
+                </div>
               </div>
             )}
           </div>
-        )}
+        </main>
       </SignedIn>
-
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent aria-label="Delete agent">
-          <DialogHeader>
-            <DialogTitle>Delete agent</DialogTitle>
-            <DialogDescription>
-              This will remove {agent?.name}. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          {deleteError ? (
-            <div className="rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-3 text-xs text-muted">
-              {deleteError}
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DashboardShell>
   );
+}
+
+function MetricBar({ label, value, color }: { label: string; value: number; color: 'green' | 'blue' | 'purple' | 'orange' | 'red' }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-[color:var(--text-muted)]">{label}</span>
+        <span className="text-xs font-medium text-[color:var(--text)]">{value}%</span>
+      </div>
+      <ProgressBar progress={value} height={6} color={color} />
+    </div>
+  );
+}
+
+function SessionRow({ session }: { session: ClawdbotSession }) {
+  const statusColors = {
+    active: "bg-green-100 text-green-700",
+    completed: "bg-gray-100 text-gray-700",
+    error: "bg-red-100 text-red-700",
+  };
+  
+  const channelIcons: Record<string, string> = {
+    telegram: "📱",
+    discord: "💬",
+    webchat: "🌐",
+    whatsapp: "📲",
+    slack: "💼",
+  };
+  
+  const duration = session.endedAt
+    ? Math.floor((new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime()) / 60000)
+    : null;
+  
+  return (
+    <div className="flex items-center gap-4 px-6 py-4 hover:bg-[color:var(--surface-muted)] transition-colors">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[color:var(--surface-muted)] text-lg">
+        {channelIcons[session.channel] || "💬"}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-[color:var(--text)] truncate">
+            {session.channel.charAt(0).toUpperCase() + session.channel.slice(1)} Session
+          </p>
+          <span className={cn(
+            "inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium",
+            statusColors[session.status]
+          )}>
+            {session.status}
+          </span>
+        </div>
+        <p className="text-xs text-[color:var(--text-quiet)]">
+          {formatDateTime(session.startedAt)}
+          {duration !== null && ` • ${duration}m`}
+        </p>
+      </div>
+      <div className="text-right">
+        <p className="text-sm font-medium text-[color:var(--text)]">{session.messageCount}</p>
+        <p className="text-xs text-[color:var(--text-quiet)]">messages</p>
+      </div>
+    </div>
+  );
+}
+
+function formatRelativeTime(isoString: string): string {
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
+function formatDateTime(isoString: string): string {
+  const date = new Date(isoString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }

@@ -34,16 +34,18 @@ export function LandingHero() {
     <>
       <section className="hero">
         <div className="hero-content">
-          <div className="hero-label">OpenClaw Mission Control</div>
+          <div className="hero-label">
+            <span>🤖</span>
+            Clawdbot Mission Control
+          </div>
           <h1>
-            Command <span className="hero-highlight">autonomous work.</span>
+            Your AI agents,
             <br />
-            Keep human oversight.
+            <span className="hero-highlight">one command center.</span>
           </h1>
           <p>
-            Track tasks, approvals, and agent health in one unified command
-            center. Get real-time signals when work changes, without losing the
-            thread of execution.
+            Monitor your Clawdbot agents in real-time. Track tasks, sessions, and performance 
+            across Echo, Forge, Scribe, Scout, Sentinel, and Archive.
           </p>
 
           <div className="hero-actions">
@@ -52,47 +54,47 @@ export function LandingHero() {
                 <>
                   <SignInButton
                     mode="modal"
-                    forceRedirectUrl="/boards"
-                    signUpForceRedirectUrl="/boards"
+                    forceRedirectUrl="/dashboard"
+                    signUpForceRedirectUrl="/dashboard"
                   >
                     <button type="button" className="btn-large primary">
-                      Open Boards <ArrowIcon />
+                      Open Dashboard <ArrowIcon />
                     </button>
                   </SignInButton>
                   <SignInButton
                     mode="modal"
-                    forceRedirectUrl="/boards/new"
-                    signUpForceRedirectUrl="/boards/new"
+                    forceRedirectUrl="/reports"
+                    signUpForceRedirectUrl="/reports"
                   >
                     <button type="button" className="btn-large secondary">
-                      Create Board
+                      View Reports
                     </button>
                   </SignInButton>
                 </>
               ) : (
                 <>
-                  <Link href="/boards" className="btn-large primary">
-                    Open Boards <ArrowIcon />
+                  <Link href="/dashboard" className="btn-large primary">
+                    Open Dashboard <ArrowIcon />
                   </Link>
-                  <Link href="/boards/new" className="btn-large secondary">
-                    Create Board
+                  <Link href="/reports" className="btn-large secondary">
+                    View Reports
                   </Link>
                 </>
               )}
             </SignedOut>
 
             <SignedIn>
-              <Link href="/boards" className="btn-large primary">
-                Open Boards <ArrowIcon />
+              <Link href="/dashboard" className="btn-large primary">
+                Open Dashboard <ArrowIcon />
               </Link>
-              <Link href="/boards/new" className="btn-large secondary">
-                Create Board
+              <Link href="/reports" className="btn-large secondary">
+                View Reports
               </Link>
             </SignedIn>
           </div>
 
           <div className="hero-features">
-            {["Agent-First Operations", "Approval Queues", "Live Signals"].map(
+            {["6 Specialized Agents", "Real-time Monitoring", "Daily Reports"].map(
               (label) => (
                 <div key={label} className="hero-feature">
                   <div className="feature-icon">✓</div>
@@ -105,23 +107,23 @@ export function LandingHero() {
 
         <div className="command-surface">
           <div className="surface-header">
-            <div className="surface-title">Command Surface</div>
+            <div className="surface-title">Agent Command Center</div>
             <div className="live-indicator">
               <div className="live-dot" />
               LIVE
             </div>
           </div>
           <div className="surface-subtitle">
-            <h3>Ship work without losing the thread.</h3>
+            <h3>Your AI workforce at a glance.</h3>
             <p>
-              Tasks, approvals, and agent status stay synced across the board.
+              Monitor all agents, track active sessions, and review performance metrics.
             </p>
           </div>
           <div className="metrics-row">
             {[
-              { label: "Boards", value: "12" },
-              { label: "Agents", value: "08" },
-              { label: "Tasks", value: "46" },
+              { label: "Agents", value: "06" },
+              { label: "Online", value: "04" },
+              { label: "Tasks Today", value: "23" },
             ].map((item) => (
               <div key={item.label} className="metric">
                 <div className="metric-value">{item.value}</div>
@@ -131,32 +133,36 @@ export function LandingHero() {
           </div>
           <div className="surface-content">
             <div className="content-section">
-              <h4>Board — In Progress</h4>
+              <h4>Active Agents</h4>
               {[
-                "Cut release candidate",
-                "Triage approvals backlog",
-                "Stabilize agent handoffs",
-              ].map((title) => (
-                <div key={title} className="status-item">
-                  <div className="status-icon progress">⊙</div>
+                { emoji: "🔮", name: "Echo", task: "Processing queries..." },
+                { emoji: "⚒️", name: "Forge", task: "Building components..." },
+                { emoji: "✍️", name: "Scribe", task: "Writing documentation..." },
+              ].map((agent) => (
+                <div key={agent.name} className="status-item">
+                  <div className="status-icon progress">{agent.emoji}</div>
                   <div className="status-item-content">
-                    <div className="status-item-title">{title}</div>
+                    <div className="status-item-title">{agent.name}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-quiet)' }}>{agent.task}</div>
                   </div>
                 </div>
               ))}
             </div>
 
             <div className="content-section">
-              <h4>Approvals — 3 Pending</h4>
+              <h4>Other Agents</h4>
               {[
-                { title: "Deploy window confirmed", status: "ready" as const },
-                { title: "Copy reviewed", status: "waiting" as const },
-                { title: "Security sign-off", status: "waiting" as const },
-              ].map((item) => (
-                <div key={item.title} className="approval-item">
-                  <div className="approval-title">{item.title}</div>
-                  <div className={`approval-badge ${item.status}`}>
-                    {item.status}
+                { emoji: "🔭", name: "Scout", status: "idle" as const },
+                { emoji: "🛡️", name: "Sentinel", status: "idle" as const },
+                { emoji: "📚", name: "Archive", status: "offline" as const },
+              ].map((agent) => (
+                <div key={agent.name} className="approval-item">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{agent.emoji}</span>
+                    <div className="approval-title">{agent.name}</div>
+                  </div>
+                  <div className={`approval-badge ${agent.status === 'idle' ? 'ready' : 'waiting'}`}>
+                    {agent.status}
                   </div>
                 </div>
               ))}
@@ -165,16 +171,16 @@ export function LandingHero() {
 
           <div
             style={{
-              padding: "2rem",
-              borderTop: "1px solid var(--neutral-200)",
+              padding: "1.5rem",
+              borderTop: "1px solid var(--border-light)",
             }}
           >
             <div className="content-section">
-              <h4>Signals — Updated Moments Ago</h4>
+              <h4>Recent Activity</h4>
               {[
-                { text: "Agent Delta moved task to review", time: "Now" },
-                { text: "Growth Ops hit WIP limit", time: "5m" },
-                { text: "Release pipeline stabilized", time: "12m" },
+                { text: "Forge committed 3 files to mission-control", time: "Now" },
+                { text: "Echo completed conversation analysis", time: "2m" },
+                { text: "Scribe updated AGENTS.md", time: "8m" },
               ].map((signal) => (
                 <div key={signal.text} className="signal-item">
                   <div className="signal-text">{signal.text}</div>
@@ -190,24 +196,24 @@ export function LandingHero() {
         <div className="features-grid">
           {[
             {
-              title: "Boards as ops maps",
+              title: "Agent Dashboard",
               description:
-                "Keep tasks, priorities, dependencies, and ownership visible at a glance.",
+                "See all your Clawdbot agents at a glance. Monitor who's online, what they're working on, and their performance.",
             },
             {
-              title: "Approvals that move",
+              title: "Daily Reports",
               description:
-                "Queue, comment, and approve without losing context or slowing execution.",
+                "Auto-generated summaries of agent activity. Track commits, tasks completed, and highlights for each day.",
             },
             {
-              title: "Realtime signals",
+              title: "Session Tracking",
               description:
-                "See work change as it happens: tasks, agent status, and approvals update live.",
+                "View active and historical sessions across all channels. Telegram, Discord, WhatsApp, and more.",
             },
             {
-              title: "Audit trail built in",
+              title: "Performance Metrics",
               description:
-                "Every decision leaves a trail, so the board stays explainable and reviewable.",
+                "Track success rates, response times, and error rates. Identify trends and optimize agent workflows.",
             },
           ].map((feature, idx) => (
             <div key={feature.title} className="feature-card">
@@ -223,10 +229,9 @@ export function LandingHero() {
 
       <section className="cta-section">
         <div className="cta-content">
-          <h2>Start with one board. Grow into a control room.</h2>
+          <h2>Take control of your AI agents.</h2>
           <p>
-            Onboard a board, name a lead agent, and keep approvals and signals
-            visible from day one.
+            Start monitoring your Clawdbot fleet today. One dashboard for all your agents.
           </p>
           <div className="cta-actions">
             <SignedOut>
@@ -234,41 +239,41 @@ export function LandingHero() {
                 <>
                   <SignInButton
                     mode="modal"
-                    forceRedirectUrl="/boards/new"
-                    signUpForceRedirectUrl="/boards/new"
+                    forceRedirectUrl="/dashboard"
+                    signUpForceRedirectUrl="/dashboard"
                   >
                     <button type="button" className="btn-large white">
-                      Create Board
+                      Get Started
                     </button>
                   </SignInButton>
                   <SignInButton
                     mode="modal"
-                    forceRedirectUrl="/boards"
-                    signUpForceRedirectUrl="/boards"
+                    forceRedirectUrl="/reports"
+                    signUpForceRedirectUrl="/reports"
                   >
                     <button type="button" className="btn-large outline">
-                      View Boards
+                      View Demo
                     </button>
                   </SignInButton>
                 </>
               ) : (
                 <>
-                  <Link href="/boards/new" className="btn-large white">
-                    Create Board
+                  <Link href="/dashboard" className="btn-large white">
+                    Get Started
                   </Link>
-                  <Link href="/boards" className="btn-large outline">
-                    View Boards
+                  <Link href="/reports" className="btn-large outline">
+                    View Demo
                   </Link>
                 </>
               )}
             </SignedOut>
 
             <SignedIn>
-              <Link href="/boards/new" className="btn-large white">
-                Create Board
+              <Link href="/dashboard" className="btn-large white">
+                Open Dashboard
               </Link>
-              <Link href="/boards" className="btn-large outline">
-                View Boards
+              <Link href="/reports" className="btn-large outline">
+                View Reports
               </Link>
             </SignedIn>
           </div>

@@ -19,6 +19,12 @@ from app.schemas.board_webhooks import (
     BoardWebhookUpdate,
 )
 from app.schemas.boards import BoardCreate, BoardRead, BoardUpdate
+from app.schemas.content import (
+    ContentPostActionResponse,
+    ContentPostCreate,
+    ContentPostRead,
+    ContentPostUpdate,
+)
 from app.schemas.gateways import GatewayCreate, GatewayRead, GatewayUpdate
 from app.schemas.metrics import DashboardMetrics
 from app.schemas.organizations import (
@@ -75,6 +81,10 @@ __all__ = [
     "BoardCreate",
     "BoardRead",
     "BoardUpdate",
+    "ContentPostActionResponse",
+    "ContentPostCreate",
+    "ContentPostRead",
+    "ContentPostUpdate",
     "GatewayCreate",
     "GatewayRead",
     "GatewayUpdate",
