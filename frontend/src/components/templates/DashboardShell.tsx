@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { Menu } from "lucide-react";
 
 import { SignedIn, useAuth } from "@/auth/clerk";
 
@@ -16,11 +17,34 @@ import { OrgSwitcher } from "@/components/organisms/OrgSwitcher";
 import { UserMenu } from "@/components/organisms/UserMenu";
 import { isOnboardingComplete } from "@/lib/onboarding";
 
+// Mobile sidebar context
+type MobileSidebarContextType = {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  toggle: () => void;
+};
+
+const MobileSidebarContext = createContext<MobileSidebarContextType>({
+  isOpen: false,
+  setIsOpen: () => {},
+  toggle: () => {},
+});
+
+export function useMobileSidebar() {
+  return useContext(MobileSidebarContext);
+}
+
 export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isSignedIn } = useAuth();
   const isOnboardingPath = pathname === "/onboarding";
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   const meQuery = useGetMeApiV1UsersMeGet<
     getMeApiV1UsersMeGetResponse,
@@ -68,36 +92,58 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const mobileSidebarValue = {
+    isOpen: sidebarOpen,
+    setIsOpen: setSidebarOpen,
+    toggle: () => setSidebarOpen((prev) => !prev),
+  };
+
   return (
-    <div className="min-h-screen bg-app text-strong">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[260px_1fr_auto] items-center gap-0 py-3">
-          <div className="flex items-center px-6">
-            <BrandMark />
+    <MobileSidebarContext.Provider value={mobileSidebarValue}>
+      <div className="min-h-screen bg-app text-strong">
+        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-2 px-4 py-3 md:grid md:grid-cols-[260px_1fr_auto] md:gap-0 md:px-0">
+            {/* Mobile hamburger + Brand */}
+            <div className="flex items-center gap-3 md:px-6">
+              <SignedIn>
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:hidden"
+                  aria-label="Open menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              </SignedIn>
+              <BrandMark />
+            </div>
+            {/* Org switcher - hidden on mobile, show inline on tablet+ */}
+            <SignedIn>
+              <div className="hidden items-center md:flex">
+                <div className="max-w-[220px]">
+                  <OrgSwitcher />
+                </div>
+              </div>
+            </SignedIn>
+            {/* User menu */}
+            <SignedIn>
+              <div className="flex items-center gap-3 md:px-6">
+                <div className="hidden text-right lg:block">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {displayName}
+                  </p>
+                  <p className="text-xs text-slate-500">Operator</p>
+                </div>
+                <UserMenu displayName={displayName} displayEmail={displayEmail} />
+              </div>
+            </SignedIn>
           </div>
-          <SignedIn>
-            <div className="flex items-center">
-              <div className="max-w-[220px]">
-                <OrgSwitcher />
-              </div>
-            </div>
-          </SignedIn>
-          <SignedIn>
-            <div className="flex items-center gap-3 px-6">
-              <div className="hidden text-right lg:block">
-                <p className="text-sm font-semibold text-slate-900">
-                  {displayName}
-                </p>
-                <p className="text-xs text-slate-500">Operator</p>
-              </div>
-              <UserMenu displayName={displayName} displayEmail={displayEmail} />
-            </div>
-          </SignedIn>
+        </header>
+        {/* Main content grid - sidebar hidden on mobile */}
+        <div className="min-h-[calc(100vh-64px)] bg-slate-50 md:grid md:grid-cols-[260px_1fr]">
+          {children}
         </div>
-      </header>
-      <div className="grid min-h-[calc(100vh-64px)] grid-cols-[260px_1fr] bg-slate-50">
-        {children}
       </div>
-    </div>
+    </MobileSidebarContext.Provider>
   );
 }

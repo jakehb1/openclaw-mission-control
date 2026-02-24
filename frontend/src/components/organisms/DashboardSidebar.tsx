@@ -19,6 +19,7 @@ import {
   FileText,
   Calendar,
   Zap,
+  X,
 } from "lucide-react";
 
 import { useAuth } from "@/auth/clerk";
@@ -29,12 +30,14 @@ import {
   useHealthzHealthzGet,
 } from "@/api/generated/default/default";
 import { useGatewayHealth, useClawdbotAgents } from "@/lib/use-clawdbot";
+import { useMobileSidebar } from "@/components/templates/DashboardShell";
 import { cn } from "@/lib/utils";
 
 export function DashboardSidebar() {
   const pathname = usePathname();
   const { isSignedIn } = useAuth();
   const { isAdmin } = useOrganizationMembership(isSignedIn);
+  const { isOpen, setIsOpen } = useMobileSidebar();
   
   // Backend health
   const healthQuery = useHealthzHealthzGet<healthzHealthzGetResponse, ApiError>(
@@ -66,8 +69,8 @@ export function DashboardSidebar() {
   
   const gatewayStatus = gatewayQuery.data?.ok ? "operational" : "degraded";
 
-  return (
-    <aside className="flex h-full w-64 flex-col border-r border-[color:var(--border-light)] bg-white">
+  const sidebarContent = (
+    <>
       <div className="flex-1 overflow-y-auto px-3 py-4">
         <nav className="space-y-6 text-sm">
           {/* Overview */}
@@ -206,7 +209,44 @@ export function DashboardSidebar() {
           detail={gatewayQuery.data?.version}
         />
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar - hidden on mobile */}
+      <aside className="hidden h-full w-64 flex-col border-r border-[color:var(--border-light)] bg-white md:flex">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 transition-opacity"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+          {/* Slide-out drawer */}
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl animate-in slide-in-from-left duration-300">
+            {/* Mobile header with close button */}
+            <div className="flex items-center justify-between border-b border-[color:var(--border-light)] px-4 py-3">
+              <span className="font-semibold text-slate-900">Menu</span>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
 

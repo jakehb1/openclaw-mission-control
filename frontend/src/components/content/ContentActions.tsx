@@ -30,52 +30,57 @@ export function ContentActions({
 
   if (variant === "card") {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Primary actions - larger touch targets */}
         {canApprove && onApprove && (
           <Button
-            variant="default"
-            size="sm"
+            variant="primary"
+            size="md"
             onClick={() => onApprove(post)}
             disabled={isPending}
-            className="bg-green-600 hover:bg-green-700"
+            className="min-w-[100px] bg-green-600 hover:bg-green-700 active:bg-green-800 touch-manipulation"
           >
-            <Check className="h-4 w-4 mr-1" />
+            <Check className="h-4 w-4 mr-1.5" />
             Approve
           </Button>
         )}
         {canReject && onReject && (
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             onClick={() => onReject(post)}
             disabled={isPending}
-            className="border-red-300 text-red-600 hover:bg-red-50"
+            className="min-w-[90px] border-red-300 text-red-600 hover:bg-red-50 active:bg-red-100 touch-manipulation"
           >
-            <X className="h-4 w-4 mr-1" />
+            <X className="h-4 w-4 mr-1.5" />
             Reject
           </Button>
         )}
-        {onEdit && !isPosted && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit(post)}
-            disabled={isPending}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-        )}
-        {onDelete && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(post)}
-            disabled={isPending}
-            className="text-red-600 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
+        {/* Secondary actions */}
+        <div className="ml-auto flex items-center gap-1">
+          {onEdit && !isPosted && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(post)}
+              disabled={isPending}
+              className="h-10 w-10 p-0 touch-manipulation"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(post)}
+              disabled={isPending}
+              className="h-10 w-10 p-0 text-red-600 hover:bg-red-50 active:bg-red-100 touch-manipulation"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
