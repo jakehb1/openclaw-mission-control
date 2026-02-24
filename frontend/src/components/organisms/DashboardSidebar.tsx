@@ -117,18 +117,16 @@ export function DashboardSidebar() {
           </div>
 
           {/* Content */}
-          {isAdmin && (
-            <div>
-              <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-[color:var(--text-quiet)]">
-                Content
-              </p>
-              <div className="mt-2 space-y-0.5">
-                <NavLink href="/content" icon={<FileEdit className="h-4 w-4" />} active={pathname.startsWith("/content")}>
-                  Content Queue
-                </NavLink>
-              </div>
+          <div>
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-[color:var(--text-quiet)]">
+              Content
+            </p>
+            <div className="mt-2 space-y-0.5">
+              <NavLink href="/content" icon={<FileEdit className="h-4 w-4" />} active={pathname.startsWith("/content")}>
+                Content Queue
+              </NavLink>
             </div>
-          )}
+          </div>
 
           {/* Boards */}
           <div>

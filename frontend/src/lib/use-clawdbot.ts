@@ -17,8 +17,8 @@ import {
   generateMockSessions,
 } from './clawdbot-gateway';
 
-// Use mock data in development or when gateway isn't available
-const USE_MOCK_DATA = process.env.NODE_ENV === 'development' || !process.env.NEXT_PUBLIC_CLAWDBOT_GATEWAY_URL;
+// Use mock data only when gateway URL isn't configured
+const USE_MOCK_DATA = !process.env.NEXT_PUBLIC_CLAWDBOT_GATEWAY_URL;
 
 export function useGatewayHealth() {
   return useQuery({

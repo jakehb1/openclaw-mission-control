@@ -110,7 +110,7 @@ export default function ContentPage() {
     },
     {
       query: {
-        enabled: Boolean(isSignedIn && isAdmin),
+        enabled: Boolean(isSignedIn),
         refetchInterval: 15_000,
         refetchOnMount: "always",
       },
@@ -236,8 +236,7 @@ export default function ContentPage() {
             </Button>
           </div>
         }
-        isAdmin={isAdmin}
-        adminOnlyMessage="Only organization owners and admins can manage content."
+        isAdmin={true}
         stickyHeader
       >
         <div className="space-y-4 sm:space-y-6">
