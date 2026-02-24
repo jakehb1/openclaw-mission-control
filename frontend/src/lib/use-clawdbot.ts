@@ -58,8 +58,13 @@ export function useClawdbotSessions(days: number = 7) {
       if (USE_MOCK_DATA) {
         return generateMockSessions(days);
       }
-      // Real implementation would fetch from gateway
-      return [];
+      try {
+        const response = await fetch(`/api/gateway/sessions`);
+        const data = await response.json();
+        return data.sessions || [];
+      } catch {
+        return [];
+      }
     },
     staleTime: 30000,
     refetchInterval: 60000,
@@ -73,8 +78,12 @@ export function useClawdbotActivity(days: number = 7) {
       if (USE_MOCK_DATA) {
         return generateMockActivity(days);
       }
-      // Real implementation would fetch from gateway
-      return [];
+      try {
+        const response = await fetch(`/api/gateway/activity?days=${days}`);
+        return await response.json();
+      } catch {
+        return [];
+      }
     },
     staleTime: 30000,
     refetchInterval: 60000,
