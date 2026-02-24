@@ -20,6 +20,7 @@ import {
   Calendar,
   Zap,
   X,
+  Target,
 } from "lucide-react";
 
 import { useAuth } from "@/auth/clerk";
@@ -116,12 +117,15 @@ export function DashboardSidebar() {
             </div>
           </div>
 
-          {/* Content */}
+          {/* Operations */}
           <div>
             <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-[color:var(--text-quiet)]">
-              Content
+              Operations
             </p>
             <div className="mt-2 space-y-0.5">
+              <NavLink href="/missions" icon={<Target className="h-4 w-4" />} active={pathname.startsWith("/missions")}>
+                Missions
+              </NavLink>
               <NavLink href="/content" icon={<FileEdit className="h-4 w-4" />} active={pathname.startsWith("/content")}>
                 Content Queue
               </NavLink>
