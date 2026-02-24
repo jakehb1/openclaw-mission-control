@@ -304,20 +304,17 @@ class ClawdbotGatewayClient {
 // Singleton instance
 export const gatewayClient = new ClawdbotGatewayClient();
 
-// Check if gateway is reachable by hitting the root (serves web UI)
+// Check if gateway is reachable via our proxy API (avoids CORS)
 export async function fetchGatewayHealth(): Promise<GatewayHealth> {
   try {
-    const response = await fetch(GATEWAY_URL, {
-      method: 'HEAD',
-      headers: GATEWAY_TOKEN ? { Authorization: `Bearer ${GATEWAY_TOKEN}` } : {},
-    });
-    // If we get any response, gateway is up
+    const response = await fetch('/api/gateway/health');
+    const data = await response.json();
     return {
-      ok: response.ok || response.status < 500,
-      version: 'connected',
-      uptime: 0,
-      linkedChannels: [],
-      connectedAgents: 1,
+      ok: data.ok ?? false,
+      version: data.version || 'unknown',
+      uptime: data.uptime || 0,
+      linkedChannels: data.linkedChannels || [],
+      connectedAgents: data.connectedAgents || 0,
     };
   } catch {
     return {
