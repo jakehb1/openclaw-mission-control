@@ -57,46 +57,46 @@ export function ContentCard({
 
   return (
     <div
-      className={`rounded-xl border-2 p-4 shadow-sm transition-shadow hover:shadow-md ${tierClass}`}
+      className={`rounded-xl border-2 p-3 sm:p-4 shadow-sm transition-shadow hover:shadow-md ${tierClass}`}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-lg font-bold">
+      <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          <span className="text-base sm:text-lg font-bold">
             {PLATFORM_LABELS[post.platform] ?? post.platform}
           </span>
           <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[post.status] ?? "bg-gray-100 text-gray-800"}`}
+            className={`inline-flex items-center rounded-full px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium ${STATUS_COLORS[post.status] ?? "bg-gray-100 text-gray-800"}`}
           >
             {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
           </span>
           <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TIER_BADGE_COLORS[post.auto_post_tier] ?? "bg-gray-100 text-gray-800"}`}
+            className={`inline-flex items-center rounded-full px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium ${TIER_BADGE_COLORS[post.auto_post_tier] ?? "bg-gray-100 text-gray-800"}`}
           >
             {post.auto_post_tier.toUpperCase()}
           </span>
         </div>
-        <span className="text-xs text-slate-500 whitespace-nowrap">
+        <span className="text-[10px] sm:text-xs text-slate-500 whitespace-nowrap flex-shrink-0">
           {formatRelativeTimestamp(post.created_at)}
         </span>
       </div>
 
       {/* Content */}
-      <div className="mb-3">
+      <div className="mb-2 sm:mb-3">
         <p className="text-sm text-slate-900 whitespace-pre-wrap leading-relaxed">
           {post.content}
         </p>
       </div>
 
       {/* Metadata */}
-      <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-slate-500 mb-3">
         <span>{SOURCE_TYPE_LABELS[post.source_type] ?? post.source_type}</span>
         {post.source_url && (
           <a
             href={post.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
+            className="text-blue-600 hover:underline active:text-blue-800"
           >
             View source →
           </a>
@@ -108,7 +108,7 @@ export function ContentCard({
         )}
       </div>
 
-      {/* Actions */}
+      {/* Actions - touch-friendly */}
       <div className="border-t border-slate-200/50 pt-3">
         <ContentActions
           post={post}

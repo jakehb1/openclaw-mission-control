@@ -34,7 +34,8 @@ import {
 import { type ContentPostRead } from "@/api/generated/model";
 import { useOrganizationMembership } from "@/lib/use-organization-membership";
 import { useUrlSorting } from "@/lib/use-url-sorting";
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, Filter, ChevronDown } from "lucide-react";
+import { useEffect } from "react";
 
 const CONTENT_SORTABLE_COLUMNS = [
   "content",
@@ -47,9 +48,24 @@ const CONTENT_SORTABLE_COLUMNS = [
 
 type ViewMode = "table" | "cards";
 
+// Hook to detect mobile viewport
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  return isMobile;
+}
+
 export default function ContentPage() {
   const { isSignedIn } = useAuth();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const { isAdmin } = useOrganizationMembership(isSignedIn);
   const { sorting, onSortingChange } = useUrlSorting({
@@ -61,7 +77,16 @@ export default function ContentPage() {
   const [deleteTarget, setDeleteTarget] = useState<ContentPostRead | null>(null);
   const [editTarget, setEditTarget] = useState<ContentPostRead | null>(null);
   const [editContent, setEditContent] = useState("");
+  // Default to cards view on mobile
   const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+
+  // Set default view mode based on screen size
+  useEffect(() => {
+    if (isMobile) {
+      setViewMode("cards");
+    }
+  }, [isMobile]);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -215,67 +240,88 @@ export default function ContentPage() {
         adminOnlyMessage="Only organization owners and admins can manage content."
         stickyHeader
       >
-        <div className="space-y-6">
-          {/* Filters */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <label
-                  htmlFor="content-status-filter"
-                  className="mb-1 block text-sm font-medium text-slate-700"
-                >
-                  Status
-                </label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger id="content-status-filter" className="h-11">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="queued">Queued</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="posted">Posted</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
+        <div className="space-y-4 sm:space-y-6">
+          {/* Filters - Collapsible on mobile */}
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            {/* Mobile filter toggle */}
+            <button
+              type="button"
+              onClick={() => setFiltersExpanded(!filtersExpanded)}
+              className="flex w-full items-center justify-between p-4 md:hidden"
+            >
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-slate-500" />
+                <span className="text-sm font-medium text-slate-700">Filters</span>
+                {(statusFilter !== "all" || platformFilter !== "all" || tierFilter !== "all") && (
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                    Active
+                  </span>
+                )}
               </div>
-              <div>
-                <label
-                  htmlFor="content-platform-filter"
-                  className="mb-1 block text-sm font-medium text-slate-700"
-                >
-                  Platform
-                </label>
-                <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                  <SelectTrigger id="content-platform-filter" className="h-11">
-                    <SelectValue placeholder="All platforms" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All platforms</SelectItem>
-                    <SelectItem value="x">𝕏 (Twitter)</SelectItem>
-                    <SelectItem value="reddit">Reddit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label
-                  htmlFor="content-tier-filter"
-                  className="mb-1 block text-sm font-medium text-slate-700"
-                >
-                  Auto-Post Tier
-                </label>
-                <Select value={tierFilter} onValueChange={setTierFilter}>
-                  <SelectTrigger id="content-tier-filter" className="h-11">
-                    <SelectValue placeholder="All tiers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All tiers</SelectItem>
-                    <SelectItem value="green">🟢 Green (Auto-post)</SelectItem>
-                    <SelectItem value="yellow">🟡 Yellow (Review)</SelectItem>
-                    <SelectItem value="red">🔴 Red (Manual)</SelectItem>
-                  </SelectContent>
-                </Select>
+              <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${filtersExpanded ? "rotate-180" : ""}`} />
+            </button>
+            
+            {/* Filter content - always visible on desktop, collapsible on mobile */}
+            <div className={`${filtersExpanded ? "block" : "hidden"} border-t border-slate-100 p-4 md:block md:border-t-0`}>
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 md:grid-cols-3">
+                <div>
+                  <label
+                    htmlFor="content-status-filter"
+                    className="mb-1 block text-sm font-medium text-slate-700"
+                  >
+                    Status
+                  </label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger id="content-status-filter" className="h-10 sm:h-11">
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="queued">Queued</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="posted">Posted</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="content-platform-filter"
+                    className="mb-1 block text-sm font-medium text-slate-700"
+                  >
+                    Platform
+                  </label>
+                  <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                    <SelectTrigger id="content-platform-filter" className="h-10 sm:h-11">
+                      <SelectValue placeholder="All platforms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All platforms</SelectItem>
+                      <SelectItem value="x">𝕏 (Twitter)</SelectItem>
+                      <SelectItem value="reddit">Reddit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="sm:col-span-2 md:col-span-1">
+                  <label
+                    htmlFor="content-tier-filter"
+                    className="mb-1 block text-sm font-medium text-slate-700"
+                  >
+                    Auto-Post Tier
+                  </label>
+                  <Select value={tierFilter} onValueChange={setTierFilter}>
+                    <SelectTrigger id="content-tier-filter" className="h-10 sm:h-11">
+                      <SelectValue placeholder="All tiers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All tiers</SelectItem>
+                      <SelectItem value="green">🟢 Green (Auto-post)</SelectItem>
+                      <SelectItem value="yellow">🟡 Yellow (Review)</SelectItem>
+                      <SelectItem value="red">🔴 Red (Manual)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </div>
@@ -283,33 +329,37 @@ export default function ContentPage() {
           {/* Content display */}
           {viewMode === "table" ? (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <ContentTable
-                posts={posts}
-                isLoading={contentQuery.isLoading}
-                sorting={sorting}
-                onSortingChange={onSortingChange}
-                stickyHeader
-                onApprove={handleApprove}
-                onReject={handleReject}
-                onEdit={handleEdit}
-                onDelete={setDeleteTarget}
-                isActionPending={isMutating}
-                emptyState={{
-                  title: "No content posts yet",
-                  description:
-                    "Content generated by AI agents will appear here for review.",
-                }}
-              />
+              {/* Table with horizontal scroll on small screens */}
+              <div className="-mx-4 sm:mx-0">
+                <ContentTable
+                  posts={posts}
+                  isLoading={contentQuery.isLoading}
+                  sorting={sorting}
+                  onSortingChange={onSortingChange}
+                  stickyHeader
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                  onEdit={handleEdit}
+                  onDelete={setDeleteTarget}
+                  isActionPending={isMutating}
+                  emptyState={{
+                    title: "No content posts yet",
+                    description:
+                      "Content generated by AI agents will appear here for review.",
+                  }}
+                  hiddenColumns={isMobile ? ["source_type", "scheduled_at"] : undefined}
+                />
+              </div>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {contentQuery.isLoading ? (
                 <div className="col-span-full text-center py-12 text-slate-500">
                   Loading...
                 </div>
               ) : posts.length === 0 ? (
-                <div className="col-span-full rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-                  <p className="text-lg font-medium text-slate-900">
+                <div className="col-span-full rounded-xl border border-slate-200 bg-white p-8 sm:p-12 text-center shadow-sm">
+                  <p className="text-base sm:text-lg font-medium text-slate-900">
                     No content posts yet
                   </p>
                   <p className="mt-2 text-sm text-slate-500">
