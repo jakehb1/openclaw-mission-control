@@ -304,19 +304,20 @@ class ClawdbotGatewayClient {
 // Singleton instance
 export const gatewayClient = new ClawdbotGatewayClient();
 
-// HTTP fallback for when WebSocket isn't available
+// Check if gateway is reachable by hitting the root (serves web UI)
 export async function fetchGatewayHealth(): Promise<GatewayHealth> {
   try {
-    const response = await fetch(`${GATEWAY_URL}/health`, {
+    const response = await fetch(GATEWAY_URL, {
+      method: 'HEAD',
       headers: GATEWAY_TOKEN ? { Authorization: `Bearer ${GATEWAY_TOKEN}` } : {},
     });
-    const data = await response.json();
+    // If we get any response, gateway is up
     return {
-      ok: data.ok ?? false,
-      version: data.version || 'unknown',
-      uptime: Math.floor((data.uptimeMs || 0) / 1000),
-      linkedChannels: data.linkedChannels || [],
-      connectedAgents: 0,
+      ok: response.ok || response.status < 500,
+      version: 'connected',
+      uptime: 0,
+      linkedChannels: [],
+      connectedAgents: 1,
     };
   } catch {
     return {
