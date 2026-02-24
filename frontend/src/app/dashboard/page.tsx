@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
@@ -51,6 +51,13 @@ export default function DashboardPage() {
   const onlineAgents = agents.filter(a => a.status === 'online' || a.status === 'busy');
   const activeSessions = sessionsQuery.data?.filter(s => s.status === 'active') ?? [];
   
+  // Live clock in PST
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  
   // Calculate weekly stats
   const weeklyStats = useMemo(() => {
     const sessions = sessionsQuery.data ?? [];
@@ -98,6 +105,25 @@ export default function DashboardPage() {
                 </h2>
                 <p className="mt-1 text-sm text-[color:var(--text-muted)]">
                   Welcome back. Here's what's happening today.
+                </p>
+              </div>
+              <div className="text-right mr-4">
+                <p className="text-3xl font-semibold text-[color:var(--text)] tabular-nums">
+                  {currentTime.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true,
+                    timeZone: 'America/Los_Angeles'
+                  })}
+                </p>
+                <p className="text-xs text-[color:var(--text-quiet)]">
+                  {currentTime.toLocaleDateString('en-US', { 
+                    weekday: 'long',
+                    month: 'short', 
+                    day: 'numeric',
+                    timeZone: 'America/Los_Angeles'
+                  })} PST
                 </p>
               </div>
               <div className="flex items-center gap-3">

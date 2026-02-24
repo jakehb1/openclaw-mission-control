@@ -46,20 +46,26 @@ function formatNextRun(ms?: number) {
   if (diffHours < 24) {
     return `in ${diffHours}h ${diffMins}m`;
   }
-  return date.toLocaleDateString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'short', 
+    hour: 'numeric', 
+    minute: '2-digit',
+    timeZone: 'America/Los_Angeles'
+  }) + ' PST';
 }
 
 function formatSchedule(schedule?: Job['schedule']) {
   if (!schedule) return 'Not scheduled';
   const expr = schedule.expr || '';
+  const tz = schedule.tz === 'America/Los_Angeles' ? 'PST' : schedule.tz;
   // Parse common cron patterns
-  if (expr === '0 7 * * *') return 'Daily at 7:00 AM';
-  if (expr === '0 8 * * *') return 'Daily at 8:00 AM';
-  if (expr === '0 9 * * *') return 'Daily at 9:00 AM';
-  if (expr === '0 10 * * *') return 'Daily at 10:00 AM';
-  if (expr === '0 18 * * 0') return 'Sundays at 6:00 PM';
-  if (expr === '0 23 * * *') return 'Daily at 11:00 PM';
-  return `${expr} (${schedule.tz})`;
+  if (expr === '0 7 * * *') return `Daily 7:00 AM ${tz}`;
+  if (expr === '0 8 * * *') return `Daily 8:00 AM ${tz}`;
+  if (expr === '0 9 * * *') return `Daily 9:00 AM ${tz}`;
+  if (expr === '0 10 * * *') return `Daily 10:00 AM ${tz}`;
+  if (expr === '0 18 * * 0') return `Sundays 6:00 PM ${tz}`;
+  if (expr === '0 23 * * *') return `Daily 11:00 PM ${tz}`;
+  return `${expr} (${tz})`;
 }
 
 function StatusBadge({ status }: { status?: string }) {
