@@ -20,7 +20,6 @@ export async function GET() {
     const clawdbotDir = join(homedir(), '.clawdbot', 'agents');
     const sessions: Session[] = [];
     
-    // Read all agent directories
     const agentDirs = await readdir(clawdbotDir).catch(() => []);
     
     for (const agentId of agentDirs) {
@@ -30,29 +29,36 @@ export async function GET() {
         const sessionFiles = await readdir(sessionsDir);
         
         for (const file of sessionFiles) {
-          if (!file.endsWith('.jsonl')) continue;
+          if (!file.endsWith('.jsonl') || file.includes('.deleted') || file.includes('.lock')) continue;
           
           const filePath = join(sessionsDir, file);
           const fileStat = await stat(filePath);
           const content = await readFile(filePath, 'utf-8');
           const lines = content.trim().split('\n').filter(Boolean);
           
-          // Count messages (lines that are user/assistant messages)
           let messageCount = 0;
-          let channel = 'unknown';
+          let channel = 'telegram';
           let firstTimestamp: string | undefined;
           let lastTimestamp: string | undefined;
           
           for (const line of lines) {
             try {
               const entry = JSON.parse(line);
-              if (entry.role === 'user' || entry.role === 'assistant') {
+              
+              // Count actual messages
+              if (entry.type === 'message' && entry.message?.role) {
                 messageCount++;
               }
-              if (entry.channel) channel = entry.channel;
-              if (entry.ts) {
-                if (!firstTimestamp) firstTimestamp = entry.ts;
-                lastTimestamp = entry.ts;
+              
+              // Get channel from session entry
+              if (entry.type === 'session' && entry.channel) {
+                channel = entry.channel;
+              }
+              
+              // Track timestamps
+              if (entry.timestamp) {
+                if (!firstTimestamp) firstTimestamp = entry.timestamp;
+                lastTimestamp = entry.timestamp;
               }
             } catch {}
           }
@@ -71,19 +77,16 @@ export async function GET() {
             status: isRecent ? 'active' : 'completed',
           });
         }
-      } catch {
-        // Sessions dir doesn't exist for this agent
-      }
+      } catch {}
     }
     
-    // Sort by most recent first
     sessions.sort((a, b) => 
       new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
     );
     
     return NextResponse.json({
       count: sessions.length,
-      sessions: sessions.slice(0, 50), // Limit to 50 most recent
+      sessions: sessions.slice(0, 50),
     });
   } catch (error) {
     console.error('Failed to fetch sessions:', error);
