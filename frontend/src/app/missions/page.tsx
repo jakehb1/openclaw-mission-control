@@ -98,6 +98,10 @@ export default function MissionsPage() {
   
   return (
     <DashboardPageLayout
+      signedOut={{
+        message: "Sign in to view agent missions.",
+        forceRedirectUrl: "/missions",
+      }}
       title="Agent Missions"
       description="Scheduled jobs and responsibilities for each agent."
       isAdmin={true}
