@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy import Index
 from sqlmodel import Field
 
@@ -47,6 +48,33 @@ class AutoPostTier(str, Enum):
     RED = "red"  # Low confidence, requires human approval
 
 
+# SQLAlchemy enum types configured to use .value (lowercase) for PostgreSQL native enums
+_ContentPlatformSA = SAEnum(
+    ContentPlatform,
+    values_callable=lambda x: [e.value for e in x],
+    name="contentplatform",
+    create_type=False,
+)
+_ContentSourceTypeSA = SAEnum(
+    ContentSourceType,
+    values_callable=lambda x: [e.value for e in x],
+    name="contentsourcetype",
+    create_type=False,
+)
+_ContentStatusSA = SAEnum(
+    ContentStatus,
+    values_callable=lambda x: [e.value for e in x],
+    name="contentstatus",
+    create_type=False,
+)
+_AutoPostTierSA = SAEnum(
+    AutoPostTier,
+    values_callable=lambda x: [e.value for e in x],
+    name="autoposttier",
+    create_type=False,
+)
+
+
 class ContentPost(TenantScoped, table=True):
     """A queued content post for social media scheduling and review."""
 
@@ -68,16 +96,18 @@ class ContentPost(TenantScoped, table=True):
 
     # Content fields
     content: str = Field(description="The post text content")
-    platform: ContentPlatform = Field(default=ContentPlatform.X)
+    platform: ContentPlatform = Field(default=ContentPlatform.X, sa_type=_ContentPlatformSA)
     source_url: str | None = Field(
         default=None,
         description="URL of the original trend/post that inspired this content",
     )
-    source_type: ContentSourceType = Field(default=ContentSourceType.MANUAL)
+    source_type: ContentSourceType = Field(
+        default=ContentSourceType.MANUAL, sa_type=_ContentSourceTypeSA
+    )
 
     # Workflow state
-    status: ContentStatus = Field(default=ContentStatus.DRAFT)
-    auto_post_tier: AutoPostTier = Field(default=AutoPostTier.YELLOW)
+    status: ContentStatus = Field(default=ContentStatus.DRAFT, sa_type=_ContentStatusSA)
+    auto_post_tier: AutoPostTier = Field(default=AutoPostTier.YELLOW, sa_type=_AutoPostTierSA)
 
     # Scheduling
     scheduled_at: datetime | None = Field(
