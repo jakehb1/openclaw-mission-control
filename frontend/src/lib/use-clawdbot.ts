@@ -31,26 +31,89 @@ export function useGatewayHealth() {
 
 export function useClawdbotAgents() {
   const healthQuery = useGatewayHealth();
-  
-  // In a real implementation, this would fetch agent status from the gateway
   const [agents, setAgents] = useState<ClawdbotAgent[]>(CLAWDBOT_AGENTS);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      // Simulate some agents being online
-      const updatedAgents = CLAWDBOT_AGENTS.map(agent => ({
-        ...agent,
-        status: Math.random() > 0.5 ? 'online' : (Math.random() > 0.5 ? 'idle' : 'offline'),
-        currentTask: Math.random() > 0.6 ? 'Processing task...' : undefined,
-        lastSeen: new Date(Date.now() - Math.floor(Math.random() * 3600000)).toISOString(),
-      })) as ClawdbotAgent[];
-      setAgents(updatedAgents);
+    async function fetchAgents() {
+      if (USE_MOCK_DATA) {
+        // Use mock data in development
+        const updatedAgents = CLAWDBOT_AGENTS.map(agent => ({
+          ...agent,
+          status: Math.random() > 0.5 ? 'online' : (Math.random() > 0.5 ? 'idle' : 'offline'),
+          currentTask: Math.random() > 0.6 ? 'Processing task...' : undefined,
+          lastSeen: new Date(Date.now() - Math.floor(Math.random() * 3600000)).toISOString(),
+        })) as ClawdbotAgent[];
+        setAgents(updatedAgents);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Fetch real agent data from gateway
+      try {
+        const { gatewayClient } = await import('./clawdbot-gateway');
+        const [agentsResponse, sessionsResponse] = await Promise.all([
+          gatewayClient.getAgents(),
+          gatewayClient.getSessions(),
+        ]);
+        
+        // Build agent list from gateway response
+        const agentMap = new Map<string, ClawdbotAgent>();
+        
+        // Start with configured agents
+        for (const agent of agentsResponse.agents) {
+          const baseAgent = CLAWDBOT_AGENTS.find(a => a.id === agent.id);
+          agentMap.set(agent.id, {
+            id: agent.id,
+            name: agent.name || baseAgent?.name || agent.id,
+            emoji: baseAgent?.emoji || '🤖',
+            status: 'offline',
+          });
+        }
+        
+        // Update status based on active sessions
+        const now = Date.now();
+        for (const session of sessionsResponse.sessions) {
+          // Extract agent id from session key (e.g., "agent:main:main" -> "main")
+          const keyParts = session.key.split(':');
+          const agentId = keyParts[1] || 'main';
+          
+          const existing = agentMap.get(agentId);
+          if (existing) {
+            // Consider agent online if session was active in last 5 minutes
+            const lastActive = session.updatedAt;
+            const isRecent = (now - lastActive) < 5 * 60 * 1000;
+            
+            agentMap.set(agentId, {
+              ...existing,
+              status: isRecent ? 'online' : 'idle',
+              lastSeen: new Date(lastActive).toISOString(),
+              sessionId: session.key,
+              currentTask: session.label || undefined,
+            });
+          }
+        }
+        
+        setAgents(Array.from(agentMap.values()));
+      } catch (error) {
+        console.error('Failed to fetch agents from gateway:', error);
+        // Fall back to default agents
+        setAgents(CLAWDBOT_AGENTS);
+      } finally {
+        setIsLoading(false);
+      }
     }
+    
+    fetchAgents();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchAgents, 30000);
+    return () => clearInterval(interval);
   }, [healthQuery.data?.ok]);
   
   return {
     agents,
-    isLoading: healthQuery.isLoading,
+    isLoading: isLoading || healthQuery.isLoading,
     isError: healthQuery.isError,
     gatewayConnected: healthQuery.data?.ok ?? false,
   };

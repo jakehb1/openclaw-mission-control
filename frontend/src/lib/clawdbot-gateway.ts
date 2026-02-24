@@ -70,9 +70,9 @@ export interface GatewayHealth {
   connectedAgents: number;
 }
 
-// Our 6 Clawdbot agents
+// Jake's actual Clawdbot agents
 export const CLAWDBOT_AGENTS: ClawdbotAgent[] = [
-  { id: 'echo', name: 'Echo', emoji: '🔮', status: 'offline' },
+  { id: 'main', name: 'Main', emoji: '🤖', status: 'offline' },
   { id: 'forge', name: 'Forge', emoji: '⚒️', status: 'offline' },
   { id: 'scribe', name: 'Scribe', emoji: '✍️', status: 'offline' },
   { id: 'scout', name: 'Scout', emoji: '🔭', status: 'offline' },
@@ -237,6 +237,60 @@ class ClawdbotGatewayClient {
       return response.entries || [];
     } catch {
       return [];
+    }
+  }
+
+  async getSessions(): Promise<{
+    count: number;
+    sessions: Array<{
+      key: string;
+      kind: string;
+      channel?: string;
+      label?: string;
+      displayName?: string;
+      updatedAt: number;
+      model?: string;
+      totalTokens?: number;
+    }>;
+  }> {
+    try {
+      const response = await this.request<{
+        count: number;
+        sessions: Array<{
+          key: string;
+          kind: string;
+          channel?: string;
+          label?: string;
+          displayName?: string;
+          updatedAt: number;
+          model?: string;
+          totalTokens?: number;
+        }>;
+      }>('sessions.list', { limit: 50 });
+      return response;
+    } catch {
+      return { count: 0, sessions: [] };
+    }
+  }
+
+  async getAgents(): Promise<{
+    agents: Array<{
+      id: string;
+      name?: string;
+      configured: boolean;
+    }>;
+  }> {
+    try {
+      const response = await this.request<{
+        agents: Array<{
+          id: string;
+          name?: string;
+          configured: boolean;
+        }>;
+      }>('agents.list', {});
+      return response;
+    } catch {
+      return { agents: [] };
     }
   }
 
