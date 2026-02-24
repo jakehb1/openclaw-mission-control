@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { 
   ArrowLeft, 
   GitCommit, 
@@ -15,6 +16,8 @@ import {
   TrendingUp,
   Calendar as CalendarIcon,
   Activity as ActivityIcon,
+  Target,
+  Zap,
 } from "lucide-react";
 
 import { SignedIn, SignedOut, useAuth } from "@/auth/clerk";
@@ -41,7 +44,18 @@ export default function AgentDetailPage() {
 
   const { agent, activity, sessions, metrics, isLoading } = useAgentDetail(agentId || '');
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'sessions'>('overview');
+  // Fetch missions/jobs for this agent
+  const { data: jobs } = useQuery({
+    queryKey: ['jobs', agentId],
+    queryFn: async () => {
+      const response = await fetch('/api/gateway/jobs');
+      const data = await response.json();
+      return (data.jobs || []).filter((j: any) => j.agentId === agentId);
+    },
+    refetchInterval: 30000,
+  });
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'missions' | 'activity' | 'sessions'>('overview');
   
   // Calculate performance score (mock)
   const performanceScore = useMemo(() => {
@@ -142,7 +156,7 @@ export default function AgentDetailPage() {
               
               {/* Tabs */}
               <div className="mt-6 flex gap-1">
-                {(['overview', 'activity', 'sessions'] as const).map((tab) => (
+                {(['overview', 'missions', 'activity', 'sessions'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -268,6 +282,58 @@ export default function AgentDetailPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+            
+            {/* Missions Tab */}
+            {activeTab === 'missions' && (
+              <div className="space-y-4">
+                {!jobs || jobs.length === 0 ? (
+                  <div className="rounded-2xl border border-[color:var(--border-light)] bg-white p-8 text-center">
+                    <Target className="h-12 w-12 mx-auto text-[color:var(--text-quiet)] mb-3" />
+                    <p className="text-[color:var(--text-muted)]">No scheduled missions for this agent.</p>
+                  </div>
+                ) : (
+                  jobs.map((job: any) => (
+                    <div key={job.id} className="rounded-2xl border border-[color:var(--border-light)] bg-white overflow-hidden">
+                      <div className="bg-[color:var(--surface-muted)] px-6 py-4 border-b border-[color:var(--border-light)]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Zap className="h-5 w-5 text-amber-500" />
+                            <h3 className="font-semibold text-[color:var(--text)]">{job.name}</h3>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-[color:var(--text-muted)]">
+                            <span className="flex items-center gap-1.5">
+                              <CalendarIcon className="h-4 w-4" />
+                              {formatCronSchedule(job.schedule?.expr)}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="h-4 w-4" />
+                              {job.nextRun ? formatNextRun(job.nextRun) : 'Not scheduled'}
+                            </span>
+                            {job.lastStatus && (
+                              <span className={cn(
+                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                                job.lastStatus === 'ok' && "bg-green-100 text-green-700",
+                                job.lastStatus === 'error' && "bg-red-100 text-red-700",
+                                job.lastStatus === 'skipped' && "bg-yellow-100 text-yellow-700"
+                              )}>
+                                {job.lastStatus === 'ok' && <CheckCircle2 className="h-3 w-3" />}
+                                {job.lastStatus === 'error' && <AlertCircle className="h-3 w-3" />}
+                                {job.lastStatus}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-6">
+                        <pre className="whitespace-pre-wrap font-mono text-sm text-[color:var(--text-muted)] bg-[color:var(--surface-muted)] rounded-xl p-4 max-h-96 overflow-y-auto leading-relaxed">
+                          {job.mission}
+                        </pre>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
             
@@ -398,4 +464,27 @@ function formatDateTime(isoString: string): string {
     hour: 'numeric',
     minute: '2-digit',
   });
+}
+
+function formatCronSchedule(expr?: string): string {
+  if (!expr) return 'Not set';
+  if (expr === '0 7 * * *') return 'Daily 7:00 AM';
+  if (expr === '0 8 * * *') return 'Daily 8:00 AM';
+  if (expr === '0 9 * * *') return 'Daily 9:00 AM';
+  if (expr === '0 10 * * *') return 'Daily 10:00 AM';
+  if (expr === '0 18 * * 0') return 'Sundays 6:00 PM';
+  if (expr === '0 23 * * *') return 'Daily 11:00 PM';
+  return expr;
+}
+
+function formatNextRun(ms: number): string {
+  const date = new Date(ms);
+  const now = new Date();
+  const diffMs = ms - now.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (diffMs < 0) return 'Overdue';
+  if (diffHours < 24) return `in ${diffHours}h ${diffMins}m`;
+  return date.toLocaleDateString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
 }
