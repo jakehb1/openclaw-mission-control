@@ -6,7 +6,7 @@ import { homedir } from 'os';
 export async function GET() {
   try {
     // Read cron jobs from Clawdbot state
-    const cronPath = join(homedir(), '.clawdbot', 'cron-jobs.json');
+    const cronPath = join(homedir(), '.clawdbot', 'cron', 'jobs.json');
     const content = await readFile(cronPath, 'utf-8');
     const data = JSON.parse(content);
     
