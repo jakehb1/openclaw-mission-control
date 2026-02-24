@@ -70,14 +70,14 @@ export interface GatewayHealth {
   connectedAgents: number;
 }
 
-// Jake's actual Clawdbot agents
+// Jake's actual Clawdbot agents with assigned roles
 export const CLAWDBOT_AGENTS: ClawdbotAgent[] = [
-  { id: 'main', name: 'Main', emoji: '🤖', status: 'offline' },
-  { id: 'forge', name: 'Forge', emoji: '⚒️', status: 'offline' },
-  { id: 'scribe', name: 'Scribe', emoji: '✍️', status: 'offline' },
-  { id: 'scout', name: 'Scout', emoji: '🔭', status: 'offline' },
-  { id: 'sentinel', name: 'Sentinel', emoji: '🛡️', status: 'offline' },
-  { id: 'archive', name: 'Archive', emoji: '📚', status: 'offline' },
+  { id: 'main', name: 'Main', emoji: '🤖', status: 'offline', currentTask: 'Personal assistant & coordinator' },
+  { id: 'scout', name: 'Scout', emoji: '🔭', status: 'offline', currentTask: 'Trend monitoring (X, Reddit, HN)' },
+  { id: 'scribe', name: 'Scribe', emoji: '✍️', status: 'offline', currentTask: 'Content drafting & copywriting' },
+  { id: 'forge', name: 'Forge', emoji: '⚒️', status: 'offline', currentTask: 'Code & automation builder' },
+  { id: 'sentinel', name: 'Sentinel', emoji: '🛡️', status: 'offline', currentTask: 'Content review & quality gate' },
+  { id: 'archive', name: 'Archive', emoji: '📚', status: 'offline', currentTask: 'Memory & documentation keeper' },
 ];
 
 class ClawdbotGatewayClient {
