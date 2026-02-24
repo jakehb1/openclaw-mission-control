@@ -49,8 +49,9 @@ function formatNextRun(ms?: number) {
   return date.toLocaleDateString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
-function formatSchedule(schedule: Job['schedule']) {
-  const expr = schedule.expr;
+function formatSchedule(schedule?: Job['schedule']) {
+  if (!schedule) return 'Not scheduled';
+  const expr = schedule.expr || '';
   // Parse common cron patterns
   if (expr === '0 7 * * *') return 'Daily at 7:00 AM';
   if (expr === '0 8 * * *') return 'Daily at 8:00 AM';
